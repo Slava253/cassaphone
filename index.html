@@ -92,6 +92,7 @@
             padding: 12px;
             border-radius: 12px;
             display: inline-block;
+            word-break: break-all;
         }
 
         .barcode-label {
@@ -241,6 +242,8 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .user-name {
@@ -262,6 +265,12 @@
             animation: fadeInUp 0.3s ease;
         }
 
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: white;
+        }
+
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -280,7 +289,11 @@
 </head>
 <body>
     <div class="container">
-        <div id="authSection" class="auth-section">
+        <div id="loading" class="loading">
+            <div>⏳ Загрузка...</div>
+        </div>
+
+        <div id="authSection" class="auth-section hidden">
             <h2 style="text-align: center; margin-bottom: 20px;">💳 Моя Карта</h2>
             <div class="input-group">
                 <label>👤 Ваше имя</label>
@@ -341,7 +354,7 @@
         };
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, query, where, orderBy, getDocs, Timestamp, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, where, orderBy, getDocs, Timestamp, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -372,25 +385,40 @@
             const userId = barcode;
             
             const userData = {
-                name: name,
-                phone: phone,
+                name: name.trim(),
+                phone: phone.trim(),
                 barcode: barcode,
                 balance: 100,
                 createdAt: Timestamp.now(),
-                totalSpent: 0
+                totalSpent: 0,
+                registeredAt: new Date().toISOString()
             };
 
             try {
+                console.log('Создаем пользователя:', userId, userData);
+                
+                // Создаем документ пользователя
                 await setDoc(doc(db, "users", userId), userData);
-                await setDoc(doc(db, "users_by_phone", phone.replace(/\D/g, '')), {
+                console.log('Пользователь создан');
+                
+                // Создаем индекс по телефону
+                const phoneKey = phone.replace(/\D/g, '');
+                await setDoc(doc(db, "users_by_phone", phoneKey), {
                     userId: userId,
-                    barcode: barcode
+                    barcode: barcode,
+                    name: name.trim(),
+                    phone: phoneKey
                 });
+                console.log('Индекс по телефону создан');
                 
                 currentUser = userData;
                 currentUserId = userId;
+                
+                // Сохраняем в localStorage
                 localStorage.setItem('userId', userId);
                 localStorage.setItem('userBarcode', barcode);
+                localStorage.setItem('userName', name);
+                
                 showToast('✅ Карта успешно создана! Вам начислено 100 бонусов');
                 return true;
             } catch (error) {
@@ -402,14 +430,23 @@
 
         async function loginByPhone(phone) {
             const cleanPhone = phone.replace(/\D/g, '');
+            if (!cleanPhone) {
+                showToast('Введите номер телефона!', true);
+                return false;
+            }
+            
             try {
+                console.log('Поиск по телефону:', cleanPhone);
                 const phoneDoc = await getDoc(doc(db, "users_by_phone", cleanPhone));
+                
                 if (!phoneDoc.exists()) {
-                    showToast('Пользователь не найден!', true);
+                    showToast('Пользователь с таким номером не найден!', true);
                     return false;
                 }
                 
                 const userId = phoneDoc.data().userId;
+                console.log('Найден userId:', userId);
+                
                 const userDoc = await getDoc(doc(db, "users", userId));
                 if (!userDoc.exists()) {
                     showToast('Пользователь не найден!', true);
@@ -418,8 +455,11 @@
                 
                 currentUser = userDoc.data();
                 currentUserId = userId;
+                
                 localStorage.setItem('userId', userId);
                 localStorage.setItem('userBarcode', currentUser.barcode);
+                localStorage.setItem('userName', currentUser.name);
+                
                 showToast('✅ Добро пожаловать, ' + currentUser.name + '!');
                 return true;
             } catch (error) {
@@ -451,14 +491,14 @@
                 historyContainer.innerHTML = '';
                 querySnapshot.forEach((doc) => {
                     const purchase = doc.data();
-                    const date = purchase.date?.toDate() || new Date();
+                    const date = purchase.date?.toDate() || new Date(purchase.createdAt) || new Date();
                     const div = document.createElement('div');
                     div.className = 'history-item';
                     div.innerHTML = `
                         <div>
                             <div class="history-date">${date.toLocaleDateString('ru-RU')} ${date.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}</div>
                             <div class="history-points">+${purchase.pointsEarned || 0} баллов</div>
-                            ${purchase.pointsUsed ? `<div class="history-points">-${purchase.pointsUsed} баллов</div>` : ''}
+                            ${purchase.pointsUsed ? `<div class="history-points" style="color:#dc3545;">-${purchase.pointsUsed} баллов</div>` : ''}
                         </div>
                         <div class="history-amount">${purchase.amount?.toFixed(2) || 0} ₽</div>
                     `;
@@ -471,19 +511,26 @@
         }
 
         function updateUI() {
+            const loadingDiv = document.getElementById('loading');
+            const authSection = document.getElementById('authSection');
+            const userSection = document.getElementById('userSection');
+            
             if (currentUser) {
+                console.log('Обновление UI с пользователем:', currentUser);
                 document.getElementById('displayName').textContent = currentUser.name;
                 document.getElementById('displayPhone').textContent = currentUser.phone;
                 document.getElementById('barcodeDisplay').textContent = currentUser.barcode;
                 document.getElementById('balanceAmount').textContent = currentUser.balance || 0;
                 
-                document.getElementById('authSection').classList.add('hidden');
-                document.getElementById('userSection').classList.remove('hidden');
+                loadingDiv.classList.add('hidden');
+                authSection.classList.add('hidden');
+                userSection.classList.remove('hidden');
                 
                 loadHistory();
             } else {
-                document.getElementById('authSection').classList.remove('hidden');
-                document.getElementById('userSection').classList.add('hidden');
+                loadingDiv.classList.add('hidden');
+                authSection.classList.remove('hidden');
+                userSection.classList.add('hidden');
             }
         }
 
@@ -492,6 +539,7 @@
             currentUserId = null;
             localStorage.removeItem('userId');
             localStorage.removeItem('userBarcode');
+            localStorage.removeItem('userName');
             updateUI();
             showToast('👋 Вы вышли из системы');
         }
@@ -505,15 +553,26 @@
             const savedUserId = localStorage.getItem('userId');
             if (savedUserId) {
                 try {
+                    console.log('Проверка сохраненной сессии:', savedUserId);
                     const userDoc = await getDoc(doc(db, "users", savedUserId));
                     if (userDoc.exists()) {
                         currentUser = userDoc.data();
                         currentUserId = savedUserId;
+                        console.log('Сессия восстановлена:', currentUser.name);
+                        updateUI();
+                    } else {
+                        console.log('Пользователь не найден, очищаем localStorage');
+                        localStorage.removeItem('userId');
+                        localStorage.removeItem('userBarcode');
+                        localStorage.removeItem('userName');
                         updateUI();
                     }
                 } catch (error) {
                     console.error('Ошибка восстановления сессии:', error);
+                    updateUI();
                 }
+            } else {
+                updateUI();
             }
         }
 
@@ -543,26 +602,36 @@
             }, 5000);
         }
 
+        // Инициализация
         document.getElementById('registerBtn').addEventListener('click', async () => {
             const name = document.getElementById('userName').value.trim();
             const phone = document.getElementById('userPhone').value.trim();
-            await registerUser(name, phone);
-            updateUI();
-            listenToUserUpdates();
+            const success = await registerUser(name, phone);
+            if (success) {
+                updateUI();
+                listenToUserUpdates();
+            }
         });
         
         document.getElementById('loginBtn').addEventListener('click', async () => {
             const phone = document.getElementById('userPhone').value.trim();
-            await loginByPhone(phone);
-            updateUI();
-            listenToUserUpdates();
+            const success = await loginByPhone(phone);
+            if (success) {
+                updateUI();
+                listenToUserUpdates();
+            }
         });
         
         document.getElementById('logoutBtn').addEventListener('click', logout);
         document.getElementById('barcodeSection').addEventListener('click', showBarcodeLarge);
         
+        // Запуск
         checkSavedSession();
-        if (currentUserId) listenToUserUpdates();
+        
+        // Если после проверки есть пользователь, запускаем обновления
+        if (currentUserId) {
+            listenToUserUpdates();
+        }
     </script>
 </body>
 </html>
