@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Моя Карта | Скидочная карта</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', 'Roboto', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: white;
+            border-radius: 32px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-header h2 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+        }
+
+        .barcode-section {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .barcode-section:active {
+            transform: scale(0.98);
+        }
+
+        .barcode {
+            font-family: 'Courier New', monospace;
+            font-size: 1.8rem;
+            letter-spacing: 4px;
+            font-weight: bold;
+            color: #333;
+            background: white;
+            padding: 12px;
+            border-radius: 12px;
+            display: inline-block;
+        }
+
+        .barcode-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .balance-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .balance-amount {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .balance-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .history-section {
+            background: white;
+            border-radius: 28px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-date {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .history-amount {
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        .history-points {
+            font-size: 0.8rem;
+            color: #ffc107;
+        }
+
+        .empty-history {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .auth-section {
+            background: white;
+            border-radius: 28px;
+            padding: 24px;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 24px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 28px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            margin-top: 10px;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .user-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 12px;
+            border-radius: 50px;
+            text-align: center;
+            z-index: 1000;
+            animation: fadeInUp 0.3s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="authSection" class="auth-section">
+            <h2 style="text-align: center; margin-bottom: 20px;">💳 Моя Карта</h2>
+            <div class="input-group">
+                <label>👤 Ваше имя</label>
+                <input type="text" id="userName" placeholder="Иван Петров">
+            </div>
+            <div class="input-group">
+                <label>📱 Телефон</label>
+                <input type="tel" id="userPhone" placeholder="+7 900 123-45-67">
+            </div>
+            <button class="btn btn-primary" id="registerBtn">🎫 Получить карту</button>
+            <button class="btn btn-secondary" id="loginBtn">🔑 У меня уже есть карта</button>
+        </div>
+
+        <div id="userSection" class="hidden">
+            <div class="card">
+                <div class="card-header">
+                    <h2>💳 Моя Карта</h2>
+                    <div class="card-icon">🎫</div>
+                </div>
+                <div class="user-info">
+                    <span class="user-name" id="displayName"></span>
+                    <span id="displayPhone"></span>
+                </div>
+                <div class="barcode-section" id="barcodeSection">
+                    <div class="barcode" id="barcodeDisplay"></div>
+                    <div class="barcode-label">Нажмите, чтобы увеличить / показать кассиру</div>
+                </div>
+            </div>
+
+            <div class="balance-card">
+                <div class="balance-label">🎯 Мои бонусы</div>
+                <div class="balance-amount" id="balanceAmount">0</div>
+                <div class="balance-label">10 баллов = 1 ₽ скидки</div>
+            </div>
+
+            <div class="history-section">
+                <div class="section-title">
+                    📜 История покупок
+                </div>
+                <div id="historyList" class="history-list">
+                    <div class="empty-history">Покупок пока нет</div>
+                </div>
+            </div>
+
+            <button class="btn logout-btn" id="logoutBtn">🚪 Выйти</button>
+        </div>
+    </div>
+
+    <script type="module">
+        const firebaseConfig = {
+            apiKey: "AIzaSyBe8_SP2dKV4kbd0D2IxIRjRxRVw_84V1A",
+            authDomain: "cassa-1b4f0.firebaseapp.com",
+            projectId: "cassa-1b4f0",
+            storageBucket: "cassa-1b4f0.firebasestorage.app",
+            messagingSenderId: "415410879122",
+            appId: "1:415410879122:web:aa1653e8fd20d318d9044b",
+            measurementId: "G-CN8X1GYW71"
+        };
+
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, query, where, orderBy, getDocs, Timestamp, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let currentUser = null;
+        let currentUserId = null;
+
+        function generateBarcode() {
+            return '29' + Math.floor(Math.random() * 10000000000).toString().padStart(10, '0');
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            toast.style.background = isError ? 'rgba(220, 53, 69, 0.9)' : 'rgba(0,0,0,0.8)';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        async function registerUser(name, phone) {
+            if (!name || !phone) {
+                showToast('Заполните все поля!', true);
+                return false;
+            }
+
+            const barcode = generateBarcode();
+            const userId = barcode;
+            
+            const userData = {
+                name: name,
+                phone: phone,
+                barcode: barcode,
+                balance: 100,
+                createdAt: Timestamp.now(),
+                totalSpent: 0
+            };
+
+            try {
+                await setDoc(doc(db, "users", userId), userData);
+                await setDoc(doc(db, "users_by_phone", phone.replace(/\D/g, '')), {
+                    userId: userId,
+                    barcode: barcode
+                });
+                
+                currentUser = userData;
+                currentUserId = userId;
+                localStorage.setItem('userId', userId);
+                localStorage.setItem('userBarcode', barcode);
+                showToast('✅ Карта успешно создана! Вам начислено 100 бонусов');
+                return true;
+            } catch (error) {
+                console.error('Ошибка регистрации:', error);
+                showToast('Ошибка регистрации: ' + error.message, true);
+                return false;
+            }
+        }
+
+        async function loginByPhone(phone) {
+            const cleanPhone = phone.replace(/\D/g, '');
+            try {
+                const phoneDoc = await getDoc(doc(db, "users_by_phone", cleanPhone));
+                if (!phoneDoc.exists()) {
+                    showToast('Пользователь не найден!', true);
+                    return false;
+                }
+                
+                const userId = phoneDoc.data().userId;
+                const userDoc = await getDoc(doc(db, "users", userId));
+                if (!userDoc.exists()) {
+                    showToast('Пользователь не найден!', true);
+                    return false;
+                }
+                
+                currentUser = userDoc.data();
+                currentUserId = userId;
+                localStorage.setItem('userId', userId);
+                localStorage.setItem('userBarcode', currentUser.barcode);
+                showToast('✅ Добро пожаловать, ' + currentUser.name + '!');
+                return true;
+            } catch (error) {
+                console.error('Ошибка входа:', error);
+                showToast('Ошибка входа: ' + error.message, true);
+                return false;
+            }
+        }
+
+        async function loadHistory() {
+            if (!currentUserId) return;
+            
+            const historyContainer = document.getElementById('historyList');
+            historyContainer.innerHTML = '<div class="empty-history">Загрузка...</div>';
+            
+            try {
+                const q = query(
+                    collection(db, "purchases"),
+                    where("userId", "==", currentUserId),
+                    orderBy("date", "desc")
+                );
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    historyContainer.innerHTML = '<div class="empty-history">📭 Покупок пока нет</div>';
+                    return;
+                }
+                
+                historyContainer.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const purchase = doc.data();
+                    const date = purchase.date?.toDate() || new Date();
+                    const div = document.createElement('div');
+                    div.className = 'history-item';
+                    div.innerHTML = `
+                        <div>
+                            <div class="history-date">${date.toLocaleDateString('ru-RU')} ${date.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}</div>
+                            <div class="history-points">+${purchase.pointsEarned || 0} баллов</div>
+                            ${purchase.pointsUsed ? `<div class="history-points">-${purchase.pointsUsed} баллов</div>` : ''}
+                        </div>
+                        <div class="history-amount">${purchase.amount?.toFixed(2) || 0} ₽</div>
+                    `;
+                    historyContainer.appendChild(div);
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки истории:', error);
+                historyContainer.innerHTML = '<div class="empty-history">❌ Ошибка загрузки</div>';
+            }
+        }
+
+        function updateUI() {
+            if (currentUser) {
+                document.getElementById('displayName').textContent = currentUser.name;
+                document.getElementById('displayPhone').textContent = currentUser.phone;
+                document.getElementById('barcodeDisplay').textContent = currentUser.barcode;
+                document.getElementById('balanceAmount').textContent = currentUser.balance || 0;
+                
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('userSection').classList.remove('hidden');
+                
+                loadHistory();
+            } else {
+                document.getElementById('authSection').classList.remove('hidden');
+                document.getElementById('userSection').classList.add('hidden');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            currentUserId = null;
+            localStorage.removeItem('userId');
+            localStorage.removeItem('userBarcode');
+            updateUI();
+            showToast('👋 Вы вышли из системы');
+        }
+
+        function showBarcodeLarge() {
+            if (!currentUser) return;
+            alert(`Ваш штрихкод для сканирования:\n\n${currentUser.barcode}\n\nПокажите этот код кассиру`);
+        }
+
+        async function checkSavedSession() {
+            const savedUserId = localStorage.getItem('userId');
+            if (savedUserId) {
+                try {
+                    const userDoc = await getDoc(doc(db, "users", savedUserId));
+                    if (userDoc.exists()) {
+                        currentUser = userDoc.data();
+                        currentUserId = savedUserId;
+                        updateUI();
+                    }
+                } catch (error) {
+                    console.error('Ошибка восстановления сессии:', error);
+                }
+            }
+        }
+
+        function listenToUserUpdates() {
+            if (!currentUserId) return;
+            
+            setInterval(async () => {
+                if (currentUserId) {
+                    try {
+                        const userDoc = await getDoc(doc(db, "users", currentUserId));
+                        if (userDoc.exists()) {
+                            const newData = userDoc.data();
+                            if (newData.balance !== currentUser.balance) {
+                                currentUser.balance = newData.balance;
+                                document.getElementById('balanceAmount').textContent = currentUser.balance;
+                                showToast(`🎉 Баланс обновлен: ${currentUser.balance} баллов`);
+                            }
+                            if (newData.totalSpent !== currentUser.totalSpent) {
+                                currentUser.totalSpent = newData.totalSpent;
+                                loadHistory();
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Ошибка обновления баланса:', error);
+                    }
+                }
+            }, 5000);
+        }
+
+        document.getElementById('registerBtn').addEventListener('click', async () => {
+            const name = document.getElementById('userName').value.trim();
+            const phone = document.getElementById('userPhone').value.trim();
+            await registerUser(name, phone);
+            updateUI();
+            listenToUserUpdates();
+        });
+        
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const phone = document.getElementById('userPhone').value.trim();
+            await loginByPhone(phone);
+            updateUI();
+            listenToUserUpdates();
+        });
+        
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        document.getElementById('barcodeSection').addEventListener('click', showBarcodeLarge);
+        
+        checkSavedSession();
+        if (currentUserId) listenToUserUpdates();
+    </script>
+</body>
+</html>
